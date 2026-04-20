@@ -5,19 +5,14 @@ import shutil
 import sys
 from pathlib import Path
 
-
-IMAGE_EXTENSIONS = {"JPEG", "PNG", "JPG", "SVG"}
-VIDEO_EXTENSIONS = {"AVI", "MP4", "MOV", "MKV"}
-DOCUMENT_EXTENSIONS = {"DOC", "DOCX", "TXT", "PDF", "XLSX", "PPTX"}
-AUDIO_EXTENSIONS = {"MP3", "OGG", "WAV", "AMR"}
-ARCHIVE_EXTENSIONS = {"ZIP", "GZ", "TAR"}
+OTHER_CATEGORY = "other"
 
 CATEGORY_MAP = {
-    "images": IMAGE_EXTENSIONS,
-    "video": VIDEO_EXTENSIONS,
-    "documents": DOCUMENT_EXTENSIONS,
-    "audio": AUDIO_EXTENSIONS,
-    "archives": ARCHIVE_EXTENSIONS,
+    "images": {"JPEG", "PNG", "JPG", "SVG"},
+    "video": {"AVI", "MP4", "MOV", "MKV"},
+    "documents": {"DOC", "DOCX", "TXT", "PDF", "XLSX", "PPTX"},
+    "audio": {"MP3", "OGG", "WAV", "AMR"},
+    "archives": {"ZIP", "GZ", "TAR"},
 }
 
 TRANSLITERATION = {
@@ -57,7 +52,7 @@ TRANSLITERATION = {
 }
 
 
-def normalize(name: str) -> str:
+def normalize(name: str, existing_names: set[str] | None = None) -> str:
     transliterated = []
     for char in name:
         lower_char = char.lower()
@@ -67,7 +62,17 @@ def normalize(name: str) -> str:
         else:
             transliterated.append(char)
     normalized_name = "".join(transliterated)
-    return re.sub(r"[^A-Za-z0-9]", "_", normalized_name)
+    normalized_name = re.sub(r"[^A-Za-z0-9]", "_", normalized_name)
+
+    if not existing_names:
+        return normalized_name
+
+    unique_name = normalized_name
+    counter = 1
+    while unique_name in existing_names:
+        unique_name = f"{normalized_name}_{counter}"
+        counter += 1
+    return unique_name
 
 
 def get_category(extension: str) -> str:
@@ -75,7 +80,7 @@ def get_category(extension: str) -> str:
     for category, extensions in CATEGORY_MAP.items():
         if upper_extension in extensions:
             return category
-    return "other"
+    return OTHER_CATEGORY
 
 
 def make_unique_path(directory: Path, filename: str) -> Path:
@@ -94,7 +99,8 @@ def move_file(file_path: Path, target_root: Path, category: str) -> None:
     target_dir = target_root / category
     target_dir.mkdir(exist_ok=True)
 
-    normalized_stem = normalize(file_path.stem)
+    existing_names = {path.stem for path in target_dir.iterdir()}
+    normalized_stem = normalize(file_path.stem, existing_names)
     new_name = f"{normalized_stem}{file_path.suffix}"
     target_path = make_unique_path(target_dir, new_name)
     shutil.move(str(file_path), str(target_path))
@@ -104,7 +110,8 @@ def handle_archive(file_path: Path, target_root: Path) -> None:
     archives_dir = target_root / "archives"
     archives_dir.mkdir(exist_ok=True)
 
-    normalized_stem = normalize(file_path.stem)
+    existing_names = {path.name for path in archives_dir.iterdir()}
+    normalized_stem = normalize(file_path.stem, existing_names)
     archive_folder = make_unique_path(archives_dir, normalized_stem)
     archive_folder.mkdir(exist_ok=True)
 
@@ -120,7 +127,7 @@ def handle_archive(file_path: Path, target_root: Path) -> None:
 def process_folder(folder_path: Path, root_path: Path) -> None:
     for item in folder_path.iterdir():
         if item.is_dir():
-            if item.name in {"images", "video", "documents", "audio", "archives", "other"}:
+            if item.name in {*CATEGORY_MAP.keys(), OTHER_CATEGORY}:
                 continue
             process_folder(item, root_path)
             try:
@@ -139,11 +146,11 @@ def process_folder(folder_path: Path, root_path: Path) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 2:
+        root_path = Path(sys.argv[1]).resolve()
+    else:
         print("Usage: python HM_1.py <folder_path>")
         sys.exit(1)
-
-    root_path = Path(sys.argv[1]).resolve()
 
     if not root_path.exists() or not root_path.is_dir():
         print(f"Folder not found: {root_path}")

@@ -28,7 +28,7 @@ import os
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
-bot = importlib.import_module("bot_assistant_v2")
+bot = importlib.import_module("HW_3_Nasukha")
 
 
 class BotTestBase(unittest.TestCase):

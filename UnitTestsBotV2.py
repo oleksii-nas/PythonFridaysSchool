@@ -26,7 +26,8 @@ import os
 # ---------------------------------------------------------------------------
 # Підключаємо модуль бота
 # ---------------------------------------------------------------------------
-sys.path.insert(0, os.path.dirname(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
 bot = importlib.import_module("bot_assistant_v2")
 
 

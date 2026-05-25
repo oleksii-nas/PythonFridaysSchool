@@ -1,103 +1,158 @@
 def input_error(func):
-
     def inner(*args, **kwargs):
+        result = None
+        error  = None
         try:
-            return func(*args, **kwargs)
+            result = func(*args, **kwargs)
         except KeyError:
-            return "Contact not found. Enter existing name."
+            error = "ERR: Contact not found. Use 'search <name>' to check existing contacts."
         except ValueError:
-            return "Give me name and phone please."
+            error = "ERR: Invalid data. Provide both name and phone number."
         except IndexError:
-            return "Enter user name."
+            error = "ERR: Missing arguments. Type 'help' for usage guide."
+        return error if error is not None else result
     return inner
 
 contacts = {}
 
+@input_error
+def create_contact(args):
+    """create contact <name> <phone> — додати новий контакт"""
+    name, phone = args[0], args[1]
+    if name in contacts:
+        return f"Contact '{name}' already exists. Use 'add phone {name} <phone>' to add another number."
+    contacts[name] = [phone]
+    return f"Contact '{name}' created with phone {phone}."
 
 @input_error
-def add_contact(args):
-    name = args[0]
-    phone = args[1]
-
-    contacts[name] = phone
-    return f"Contact {name} added."
-
-
-@input_error
-def change_contact(args):
-    name = args[0]
-    phone = args[1]
-
+def add_phone(args):
+    """add phone <name> <phone> — додати ще один номер існуючому контакту"""
+    name, phone = args[0], args[1]
     if name not in contacts:
         raise KeyError
-
-    contacts[name] = phone
-    return f"Contact {name} updated."
-
+    if phone in contacts[name]:
+        return f"Phone {phone} already exists for '{name}'."
+    contacts[name].append(phone)
+    return f"Phone {phone} added to '{name}'. Total numbers: {len(contacts[name])}."
 
 @input_error
-def phone_contact(args):
+def update_phone(args):
+    """update phone <name> <old_phone> <new_phone> — змінити номер"""
+    name, old_phone, new_phone = args[0], args[1], args[2]
+    if name not in contacts:
+        raise KeyError
+    if old_phone not in contacts[name]:
+        return f"Phone {old_phone} not found for '{name}'. Use 'search {name}' to see their numbers."
+    contacts[name][contacts[name].index(old_phone)] = new_phone
+    return f"Phone updated for '{name}': {old_phone} → {new_phone}."
+
+@input_error
+def search_contact(args):
+    """search <name> — знайти контакт та всі його номери"""
     name = args[0]
-    # contacts[name] кине KeyError, якщо такого ключа немає
-    return f"{name}: {contacts[name]}"
-
+    if name not in contacts:
+        raise KeyError
+    phones = "\n  ".join(f"{i+1}. {p}" for i, p in enumerate(contacts[name]))
+    return f"Contact '{name}':\n  {phones}"
 
 @input_error
-def show_all():
-    if not contacts:
-        return "No contacts saved yet."
-    result = "\n".join(
-        f"{name}: {phone}" for name, phone in contacts.items()
-    )
-    return result
+def remove_phone(args):
+    """remove phone <name> <phone> — видалити конкретний номер"""
+    name, phone = args[0], args[1]
+    if name not in contacts:
+        raise KeyError
+    if phone not in contacts[name]:
+        return f"Phone {phone} not found for '{name}'."
+    contacts[name].remove(phone)
+    if not contacts[name]:
+        del contacts[name]
+        return f"Last phone removed. Contact '{name}' deleted."
+    return f"Phone {phone} removed from '{name}'."
 
-def hello_command():
-    return "How can I help you?"
+@input_error
+def delete_contact(args):
+    """delete contact <name> — видалити контакт повністю"""
+    name = args[0]
+    if name not in contacts:
+        raise KeyError
+    del contacts[name]
+    return f"Contact '{name}' deleted."
+
+@input_error
+def list_contacts(args):
+    """list contacts — показати всі контакти"""
+    if not contacts:
+        return "No contacts saved yet. Use 'create contact <name> <phone>' to add one."
+    lines = []
+    for i, (name, phones) in enumerate(contacts.items(), 1):
+        phones_str = " | ".join(phones)
+        lines.append(f"  {i}. {name}: {phones_str}")
+    return "All contacts:\n" + "\n".join(lines)
+
+def hello(args):
+    return "Hello! Type 'help' to see all available commands."
+
+HELP_TEXT = """
+╔══════════════════════════════════════════════════════════════╗
+║                     AVAILABLE COMMANDS                       ║
+╠══════════════════════════════════════════════════════════════╣
+║  hello                                — greeting             ║
+║  create contact <name> <phone>        — add new contact      ║
+║  add phone <name> <phone>             — add extra phone      ║
+║  update phone <name> <old> <new>      — change phone number  ║
+║  remove phone <name> <phone>          — delete one phone     ║
+║  delete contact <name>                — delete contact       ║
+║  search <name>                        — find contact         ║
+║  list contacts                        — show all contacts    ║
+╠══════════════════════════════════════════════════════════════╣
+║  exit  |  close  |  good bye          — quit the program     ║
+╚══════════════════════════════════════════════════════════════╝
+  Tip: names are case-sensitive — "Andrii" ≠ "andrii"
+"""
+
+def show_help(args):
+    return HELP_TEXT
+
+COMMANDS = {
+    "hello":          hello,
+    "help":           show_help,
+    "create contact": create_contact,
+    "add phone":      add_phone,
+    "update phone":   update_phone,
+    "remove phone":   remove_phone,
+    "delete contact": delete_contact,
+    "search":         search_contact,
+    "list contacts":  list_contacts,
+}
+
+EXIT_COMMANDS = {"exit", "close", "good bye"}
+TWO_WORD_KEYS = {k for k in list(COMMANDS) + list(EXIT_COMMANDS) if " " in k}
 
 def parse_input(user_input):
-    parts = user_input.strip().split()   # ["Add", "Andrii", "0671234567"]
-
+    parts = user_input.strip().split()
     if not parts:
         return "", []
-
-    cmd = parts[0].lower()
-    args = parts[1:]
-
-    return cmd, args
+    two_word = f"{parts[0].lower()} {parts[1].lower()}" if len(parts) >= 2 else ""
+    if two_word in TWO_WORD_KEYS:
+        return two_word, parts[2:]
+    return parts[0].lower(), parts[1:]
 
 def main():
-    print("Welcome to the assistant bot!")
-    print("Commands: hello, add, change, phone, show all, exit/close/good bye")
-
+    print("Welcome to the Assistant Bot!")
+    print("Type 'help' to see all available commands.\n")
     while True:
-        user_input = input("Enter a command: ")
-
+        user_input = input(">>> ")
         if not user_input.strip():
             continue
-
         command, args = parse_input(user_input)
-
-        if command in ("exit", "close") or (command == "good" and args and args[0] == "bye"):
+        if command in EXIT_COMMANDS:
             print("Good bye!")
             break
-
-        elif command == "hello":
-            print(hello_command())
-
-        elif command == "add":
-            print(add_contact(args))
-
-        elif command == "change":
-            print(change_contact(args))
-
-        elif command == "phone":
-            print(phone_contact(args))
-
-        elif command == "show" and (args and args[0] == "all"):
-            print(show_all())
-
+        handler = COMMANDS.get(command)
+        if handler:
+            print(handler(args))
         else:
-            print("Invalid command. Try: hello, add, change, phone, show all, exit")
+            print(f"Unknown command '{command}'. Type 'help' to see available commands.")
 
 if __name__ == "__main__":
     main()

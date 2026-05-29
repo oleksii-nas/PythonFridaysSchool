@@ -1,10 +1,10 @@
-from typing import Callable
+from typing import Callable, Dict, List, Optional, Tuple
 
 
 def input_error(func: Callable) -> Callable:
-    def inner(*args, **kwargs) -> str | None:
-        result: str | None = None
-        error:  str | None = None
+    def inner(*args, **kwargs) -> Optional[str]:
+        result: Optional[str] = None
+        error:  Optional[str] = None
         try:
             result = func(*args, **kwargs)
         except KeyError as e:
@@ -30,7 +30,7 @@ def validate_phone(phone: str) -> str:
 
 
 @input_error
-def create_contact(args: list[str]) -> str:
+def create_contact(args: List[str]) -> str:
     """create contact <name> <phone> — додати новий контакт"""
     name, phone = args[0], args[1]
     validate_phone(phone)
@@ -41,7 +41,7 @@ def create_contact(args: list[str]) -> str:
 
 
 @input_error
-def add_phone(args: list[str]) -> str:
+def add_phone(args: List[str]) -> str:
     """add phone <name> <phone> — додати ще один номер існуючому контакту"""
     name, phone = args[0], args[1]
     validate_phone(phone)
@@ -54,7 +54,7 @@ def add_phone(args: list[str]) -> str:
 
 
 @input_error
-def update_phone(args: list[str]) -> str:
+def update_phone(args: List[str]) -> str:
     """update phone <name> <old_phone> <new_phone> — змінити номер"""
     name, old_phone, new_phone = args[0], args[1], args[2]
     validate_phone(new_phone)
@@ -67,7 +67,7 @@ def update_phone(args: list[str]) -> str:
 
 
 @input_error
-def search_contact(args: list[str]) -> str:
+def search_contact(args: List[str]) -> str:
     """search <name> — знайти контакт та всі його номери"""
     name = args[0]
     if name not in contacts:
@@ -77,7 +77,7 @@ def search_contact(args: list[str]) -> str:
 
 
 @input_error
-def remove_phone(args: list[str]) -> str:
+def remove_phone(args: List[str]) -> str:
     """remove phone <name> <phone> — видалити конкретний номер"""
     name, phone = args[0], args[1]
     if name not in contacts:
@@ -92,7 +92,7 @@ def remove_phone(args: list[str]) -> str:
 
 
 @input_error
-def delete_contact(args: list[str]) -> str:
+def delete_contact(args: List[str]) -> str:
     """delete contact <name> — видалити контакт повністю"""
     name = args[0]
     if name not in contacts:
@@ -102,7 +102,7 @@ def delete_contact(args: list[str]) -> str:
 
 
 @input_error
-def list_contacts(args: list[str]) -> str:
+def list_contacts(args: List[str]) -> str:
     """list contacts — показати всі контакти"""
     if not contacts:
         return "No contacts saved yet. Use 'create contact <name> <phone>' to add one."
@@ -113,7 +113,7 @@ def list_contacts(args: list[str]) -> str:
     return "All contacts:\n" + "\n".join(lines)
 
 
-def hello(args: list[str]) -> str:
+def hello(args: List[str]) -> str:
     return "Hello! Type 'help' to see all available commands."
 
 
@@ -136,11 +136,11 @@ HELP_TEXT = """
 """
 
 
-def show_help(args: list[str]) -> str:
+def show_help(args: List[str]) -> str:
     return HELP_TEXT
 
 
-COMMANDS: dict[str, Callable[[list[str]], str]] = {
+COMMANDS: Dict[str, Callable[[List[str]], str]] = {
     "hello":          hello,
     "help":           show_help,
     "create contact": create_contact,
@@ -156,8 +156,8 @@ EXIT_COMMANDS = {"exit", "close", "good bye"}
 TWO_WORD_KEYS = {k for k in list(COMMANDS) + list(EXIT_COMMANDS) if " " in k}
 
 
-def parse_input(user_input: str) -> tuple[str, list[str]]:
-    parts: list[str] = user_input.strip().split()
+def parse_input(user_input: str) -> Tuple[str, List[str]]:
+    parts: List[str] = user_input.strip().split()
     if not parts:
         return "", []
     two_word: str = f"{parts[0].lower()} {parts[1].lower()}" if len(parts) >= 2 else ""
@@ -177,11 +177,11 @@ def main() -> None:
         if command in EXIT_COMMANDS:
             print("Good bye!")
             break
-        match COMMANDS.get(command):
-            case None:
-                print(f"Unknown command '{command}'. Type 'help' to see available commands.")
-            case handler:
-                print(handler(args))
+        handler = COMMANDS.get(command)
+        if handler is None:
+            print(f"Unknown command '{command}'. Type 'help' to see available commands.")
+        else:
+            print(handler(args))
 
 
 if __name__ == "__main__":

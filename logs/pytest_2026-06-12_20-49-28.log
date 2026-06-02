@@ -1,0 +1,97 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0 -- /Users/user/PycharmProjects/PythonFridaysSchool/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/user/PycharmProjects/PythonFridaysSchool
+collecting ... collected 17 items
+
+homework_1/test_hm1_nasukha.py::TestNormalize::test_keeps_latin_and_digits PASSED [  5%]
+homework_1/test_hm1_nasukha.py::TestNormalize::test_keeps_uppercase_first_letter PASSED [ 11%]
+homework_1/test_hm1_nasukha.py::TestNormalize::test_replaces_non_alnum_with_underscore PASSED [ 17%]
+homework_1/test_hm1_nasukha.py::TestNormalize::test_transliterates_cyrillic PASSED [ 23%]
+homework_1/test_hm1_nasukha.py::TestNormalize::test_unique_name_appends_counter PASSED [ 29%]
+homework_1/test_hm1_nasukha.py::TestNormalize::test_unique_name_no_collision PASSED [ 35%]
+homework_1/test_hm1_nasukha.py::TestGetCategory::test_case_insensitive PASSED [ 41%]
+homework_1/test_hm1_nasukha.py::TestGetCategory::test_known_categories PASSED [ 47%]
+homework_1/test_hm1_nasukha.py::TestGetCategory::test_unknown_extension_is_other PASSED [ 52%]
+homework_1/test_hm1_nasukha.py::TestMakeUniquePath::test_appends_counter_on_collision PASSED [ 58%]
+homework_1/test_hm1_nasukha.py::TestMakeUniquePath::test_returns_same_when_free PASSED [ 64%]
+homework_1/test_hm1_nasukha.py::TestMoveFile::test_moves_into_category_folder PASSED [ 70%]
+homework_1/test_hm1_nasukha.py::TestMoveFile::test_normalizes_cyrillic_name PASSED [ 76%]
+homework_1/test_hm1_nasukha.py::TestHandleArchive::test_extracts_valid_archive PASSED [ 82%]
+homework_1/test_hm1_nasukha.py::TestHandleArchive::test_moves_corrupt_archive_as_is PASSED [ 88%]
+homework_1/test_hm1_nasukha.py::TestProcessFolder::test_sorts_nested_tree_and_removes_empty_dirs PASSED [ 94%]
+homework_1/test_hm1_nasukha.py::TestProcessFolder::test_unknown_extension_goes_to_other PASSED [100%]
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  TestNormalize                                                        ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Test                                        Status    Time        ║
+╠──────────────────────────────────────────────────────────────────────╣
+║  test_keeps_latin_and_digits                 ✓ PASS    0.0002s     ║
+║  test_keeps_uppercase_first_letter           ✓ PASS    0.0002s     ║
+║  test_replaces_non_alnum_with_underscore     ✓ PASS    0.0002s     ║
+║  test_transliterates_cyrillic                ✓ PASS    0.0001s     ║
+║  test_unique_name_appends_counter            ✓ PASS    0.0002s     ║
+║  test_unique_name_no_collision               ✓ PASS    0.0001s     ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Total: 6   Passed: 6   Failed: 0                                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  TestGetCategory                                                      ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Test                                        Status    Time        ║
+╠──────────────────────────────────────────────────────────────────────╣
+║  test_case_insensitive                       ✓ PASS    0.0001s     ║
+║  test_known_categories                       ✓ PASS    0.0001s     ║
+║  test_unknown_extension_is_other             ✓ PASS    0.0001s     ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Total: 3   Passed: 3   Failed: 0                                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  TestMakeUniquePath                                                   ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Test                                        Status    Time        ║
+╠──────────────────────────────────────────────────────────────────────╣
+║  test_appends_counter_on_collision           ✓ PASS    0.0003s     ║
+║  test_returns_same_when_free                 ✓ PASS    0.0002s     ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Total: 2   Passed: 2   Failed: 0                                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  TestMoveFile                                                         ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Test                                        Status    Time        ║
+╠──────────────────────────────────────────────────────────────────────╣
+║  test_moves_into_category_folder             ✓ PASS    0.0005s     ║
+║  test_normalizes_cyrillic_name               ✓ PASS    0.0005s     ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Total: 2   Passed: 2   Failed: 0                                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  TestHandleArchive                                                    ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Test                                        Status    Time        ║
+╠──────────────────────────────────────────────────────────────────────╣
+║  test_extracts_valid_archive                 ✓ PASS    0.0007s     ║
+║  test_moves_corrupt_archive_as_is            ✓ PASS    0.0006s     ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Total: 2   Passed: 2   Failed: 0                                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  TestProcessFolder                                                    ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Test                                        Status    Time        ║
+╠──────────────────────────────────────────────────────────────────────╣
+║  test_sorts_nested_tree_and_removes_empty_d..✓ PASS    0.0011s     ║
+║  test_unknown_extension_goes_to_other        ✓ PASS    0.0004s     ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Total: 2   Passed: 2   Failed: 0                                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+
+============================== 17 passed in 0.01s ==============================

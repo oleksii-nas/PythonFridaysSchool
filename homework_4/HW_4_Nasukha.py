@@ -15,6 +15,7 @@ def input_error(func: Callable[..., str]) -> Callable[..., Optional[str]]:
             return f"ERR: Invalid data — {e}."
         except IndexError as e:
             return f"ERR: Missing arguments — {e}. Type 'help' for usage guide."
+
     return inner
 
 
@@ -64,9 +65,12 @@ class Record:
     Відповідає за додавання / видалення / редагування полів.
     """
 
+    name: Name
+    phones: List[Phone]
+
     def __init__(self, name: str) -> None:
-        self.name:   Name         = Name(name)
-        self.phones: List[Phone]  = []
+        self.name: Name = Name(name)
+        self.phones: List[Phone] = []
 
     def add_phone(self, phone: str) -> None:
         """Додати новий номер телефону."""
@@ -122,7 +126,7 @@ class AddressBook(UserDict[str, Record]):
 # ХЕНДЛЕРИ — стиль ДЗ 3
 # ===========================================================================
 @input_error
-def create_contact(book: AddressBook,args: List[str]) -> str:
+def create_contact(book: AddressBook, args: List[str]) -> str:
     """create contact <name> <phone>"""
     name, phone = args[0], args[1]
     if book.find(name):
@@ -165,7 +169,11 @@ def search_contact(book: AddressBook, args: List[str]) -> str:
     phones: str = "\n  ".join(
         f"{i + 1}. {p.value}" for i, p in enumerate(record.phones)
     )
-    return f"Contact '{name}':\n  {phones}" if phones else f"Contact '{name}' has no phones."
+    return (
+        f"Contact '{name}':\n  {phones}"
+        if phones
+        else f"Contact '{name}' has no phones."
+    )
 
 
 @input_error
@@ -195,9 +203,7 @@ def list_contacts(book: AddressBook, args: List[str]) -> str:
     """list contacts"""
     if not book.data:
         return "No contacts saved yet. Use 'create contact <name> <phone>' to add one."
-    lines: List[str] = [
-        f"  {i}. {record}" for i, record in enumerate(book.values(), 1)
-    ]
+    lines: List[str] = [f"  {i}. {record}" for i, record in enumerate(book.values(), 1)]
     return "All contacts:\n" + "\n".join(lines)
 
 
@@ -235,15 +241,15 @@ def show_help(book: AddressBook, args: List[str]) -> str:
 # ТАБЛИЦЯ КОМАНД — стиль ДЗ 3
 # ===========================================================================
 COMMANDS: Dict[str, Callable[[AddressBook, List[str]], Optional[str]]] = {
-    "hello":          hello,
-    "help":           show_help,
+    "hello": hello,
+    "help": show_help,
     "create contact": create_contact,
-    "add phone":      add_phone,
-    "update phone":   update_phone,
-    "remove phone":   remove_phone,
+    "add phone": add_phone,
+    "update phone": update_phone,
+    "remove phone": remove_phone,
     "delete contact": delete_contact,
-    "search":         search_contact,
-    "list contacts":  list_contacts,
+    "search": search_contact,
+    "list contacts": list_contacts,
 }
 
 EXIT_COMMANDS: Set[str] = {"exit", "close", "good bye"}
@@ -280,9 +286,13 @@ def main() -> None:
         if command in EXIT_COMMANDS:
             print("Good bye!")
             break
-        handler: Optional[Callable[[AddressBook, List[str]], Optional[str]]] = COMMANDS.get(command)
+        handler: Optional[Callable[[AddressBook, List[str]], Optional[str]]] = (
+            COMMANDS.get(command)
+        )
         if handler is None:
-            print(f"Unknown command '{command}'. Type 'help' to see available commands.")
+            print(
+                f"Unknown command '{command}'. Type 'help' to see available commands."
+            )
         else:
             print(handler(book, args))
 

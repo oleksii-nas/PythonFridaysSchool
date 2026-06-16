@@ -1,23 +1,20 @@
 from collections import UserDict
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 
 # ===========================================================================
 # ДЕКОРАТОР — стиль ДЗ 3
 # ===========================================================================
-def input_error(func: Callable) -> Callable:
+def input_error(func: Callable[..., str]) -> Callable[..., Optional[str]]:
     def inner(*args, **kwargs) -> Optional[str]:
-        result: Optional[str] = None
-        error:  Optional[str] = None
         try:
-            result = func(*args, **kwargs)
+            return func(*args, **kwargs)
         except KeyError as e:
-            error = f"ERR: Contact {e} not found."
+            return f"ERR: Contact {e} not found."
         except ValueError as e:
-            error = f"ERR: Invalid data — {e}."
+            return f"ERR: Invalid data — {e}."
         except IndexError as e:
-            error = f"ERR: Missing arguments — {e}. Type 'help' for usage guide."
-        return error if error is not None else result
+            return f"ERR: Missing arguments — {e}. Type 'help' for usage guide."
     return inner
 
 
@@ -89,22 +86,18 @@ class Record:
         found: Optional[Phone] = self.find_phone(old_phone)
         if found is None:
             raise ValueError(f"Phone {old_phone} not found for '{self.name.value}'.")
-        Phone._validate(new_phone)
-        found.value = new_phone
+        found.value = Phone(new_phone).value
 
     def find_phone(self, phone: str) -> Optional[Phone]:
         """Знайти об'єкт Phone за значенням. Повертає Phone або None."""
-        for p in self.phones:
-            if p.value == phone:
-                return p
-        return None
+        return next((p for p in self.phones if p.value == phone), None)
 
     def __str__(self) -> str:
         phones_str: str = "; ".join(p.value for p in self.phones)
         return f"Contact name: {self.name.value}, phones: {phones_str}"
 
 
-class AddressBook(UserDict):
+class AddressBook(UserDict[str, Record]):
     """
     Адресна книга — успадковується від UserDict.
     Ключ: ім'я контакту (str), Значення: об'єкт Record.
@@ -126,16 +119,10 @@ class AddressBook(UserDict):
 
 
 # ===========================================================================
-# АДРЕСНА КНИГА — єдине сховище (замість contacts = {} з ДЗ 3)
-# ===========================================================================
-book: AddressBook = AddressBook()
-
-
-# ===========================================================================
 # ХЕНДЛЕРИ — стиль ДЗ 3
 # ===========================================================================
 @input_error
-def create_contact(args: List[str]) -> str:
+def create_contact(book: AddressBook,args: List[str]) -> str:
     """create contact <name> <phone>"""
     name, phone = args[0], args[1]
     if book.find(name):
@@ -147,7 +134,7 @@ def create_contact(args: List[str]) -> str:
 
 
 @input_error
-def add_phone(args: List[str]) -> str:
+def add_phone(book: AddressBook, args: List[str]) -> str:
     """add phone <name> <phone>"""
     name, phone = args[0], args[1]
     record: Optional[Record] = book.find(name)
@@ -158,7 +145,7 @@ def add_phone(args: List[str]) -> str:
 
 
 @input_error
-def update_phone(args: List[str]) -> str:
+def update_phone(book: AddressBook, args: List[str]) -> str:
     """update phone <name> <old_phone> <new_phone>"""
     name, old_phone, new_phone = args[0], args[1], args[2]
     record: Optional[Record] = book.find(name)
@@ -169,7 +156,7 @@ def update_phone(args: List[str]) -> str:
 
 
 @input_error
-def search_contact(args: List[str]) -> str:
+def search_contact(book: AddressBook, args: List[str]) -> str:
     """search <name>"""
     name: str = args[0]
     record: Optional[Record] = book.find(name)
@@ -182,7 +169,7 @@ def search_contact(args: List[str]) -> str:
 
 
 @input_error
-def remove_phone(args: List[str]) -> str:
+def remove_phone(book: AddressBook, args: List[str]) -> str:
     """remove phone <name> <phone>"""
     name, phone = args[0], args[1]
     record: Optional[Record] = book.find(name)
@@ -196,27 +183,25 @@ def remove_phone(args: List[str]) -> str:
 
 
 @input_error
-def delete_contact(args: List[str]) -> str:
+def delete_contact(book: AddressBook, args: List[str]) -> str:
     """delete contact <name>"""
     name: str = args[0]
-    if book.find(name) is None:
-        raise KeyError(f"'{name}'")
     book.delete(name)
     return f"Contact '{name}' deleted."
 
 
 @input_error
-def list_contacts(args: List[str]) -> str:
+def list_contacts(book: AddressBook, args: List[str]) -> str:
     """list contacts"""
     if not book.data:
         return "No contacts saved yet. Use 'create contact <name> <phone>' to add one."
     lines: List[str] = [
-        f"  {i}. {record}" for i, record in enumerate(book.data.values(), 1)
+        f"  {i}. {record}" for i, record in enumerate(book.values(), 1)
     ]
     return "All contacts:\n" + "\n".join(lines)
 
 
-def hello(args: List[str]) -> str:
+def hello(book: AddressBook, args: List[str]) -> str:
     return "Hello! Type 'help' to see all available commands."
 
 
@@ -242,14 +227,14 @@ HELP_TEXT: str = """
 """
 
 
-def show_help(args: List[str]) -> str:
+def show_help(book: AddressBook, args: List[str]) -> str:
     return HELP_TEXT
 
 
 # ===========================================================================
 # ТАБЛИЦЯ КОМАНД — стиль ДЗ 3
 # ===========================================================================
-COMMANDS: Dict[str, Callable[[List[str]], str]] = {
+COMMANDS: Dict[str, Callable[[AddressBook, List[str]], Optional[str]]] = {
     "hello":          hello,
     "help":           show_help,
     "create contact": create_contact,
@@ -261,8 +246,8 @@ COMMANDS: Dict[str, Callable[[List[str]], str]] = {
     "list contacts":  list_contacts,
 }
 
-EXIT_COMMANDS = {"exit", "close", "good bye"}
-TWO_WORD_KEYS = {k for k in list(COMMANDS) + list(EXIT_COMMANDS) if " " in k}
+EXIT_COMMANDS: Set[str] = {"exit", "close", "good bye"}
+TWO_WORD_KEYS: Set[str] = {k for k in list(COMMANDS) + list(EXIT_COMMANDS) if " " in k}
 
 
 # ===========================================================================
@@ -284,6 +269,9 @@ def parse_input(user_input: str) -> Tuple[str, List[str]]:
 def main() -> None:
     print("Welcome to the Assistant Bot!")
     print("Type 'help' to see all available commands.\n")
+
+    book: AddressBook = AddressBook()
+
     while True:
         user_input: str = input(">>> ")
         if not user_input.strip():
@@ -292,11 +280,11 @@ def main() -> None:
         if command in EXIT_COMMANDS:
             print("Good bye!")
             break
-        handler = COMMANDS.get(command)
+        handler: Optional[Callable[[AddressBook, List[str]], Optional[str]]] = COMMANDS.get(command)
         if handler is None:
             print(f"Unknown command '{command}'. Type 'help' to see available commands.")
         else:
-            print(handler(args))
+            print(handler(book, args))
 
 
 if __name__ == "__main__":

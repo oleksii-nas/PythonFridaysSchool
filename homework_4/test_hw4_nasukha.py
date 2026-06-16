@@ -4,7 +4,7 @@ from homework_4.HW_4_Nasukha import (
     Field, Name, Phone, Record, AddressBook,
     create_contact, add_phone, update_phone, search_contact,
     remove_phone, delete_contact, list_contacts, hello, show_help,
-    parse_input, book,
+    parse_input,
 )
 
 
@@ -154,237 +154,240 @@ class TestAddressBook(unittest.TestCase):
 
 class TestCreateContact(unittest.TestCase):
     def setUp(self):
-        book.data.clear()
+        self.book = AddressBook()
 
     def test_create_success(self):
-        result = create_contact(["Alice", "1234567890"])
+        result = create_contact(self.book, ["Alice", "1234567890"])
         self.assertIn("Alice", result)
         self.assertIn("1234567890", result)
 
     def test_create_stores_in_book(self):
-        create_contact(["Alice", "1234567890"])
-        self.assertIsNotNone(book.find("Alice"))
+        create_contact(self.book, ["Alice", "1234567890"])
+        self.assertIsNotNone(self.book.find("Alice"))
 
     def test_create_stores_phone_as_phone_object(self):
-        create_contact(["Alice", "1234567890"])
-        record = book.find("Alice")
+        create_contact(self.book, ["Alice", "1234567890"])
+        record = self.book.find("Alice")
         self.assertEqual(len(record.phones), 1)
         self.assertEqual(record.phones[0].value, "1234567890")
 
     def test_create_duplicate_returns_message(self):
-        create_contact(["Alice", "1234567890"])
-        result = create_contact(["Alice", "0987654321"])
+        create_contact(self.book, ["Alice", "1234567890"])
+        result = create_contact(self.book, ["Alice", "0987654321"])
         self.assertIn("already exists", result)
 
     def test_create_invalid_phone(self):
-        result = create_contact(["Alice", "123"])
+        result = create_contact(self.book, ["Alice", "123"])
         self.assertIn("ERR", result)
 
     def test_create_missing_phone(self):
-        result = create_contact(["Alice"])
+        result = create_contact(self.book, ["Alice"])
         self.assertIn("ERR", result)
 
     def test_create_missing_all_args(self):
-        result = create_contact([])
+        result = create_contact(self.book, [])
         self.assertIn("ERR", result)
 
 
 class TestAddPhone(unittest.TestCase):
     def setUp(self):
-        book.data.clear()
-        create_contact(["Alice", "1234567890"])
+        self.book = AddressBook()
+        create_contact(self.book, ["Alice", "1234567890"])
 
     def test_add_phone_success(self):
-        result = add_phone(["Alice", "0987654321"])
+        result = add_phone(self.book, ["Alice", "0987654321"])
         self.assertIn("0987654321", result)
 
     def test_add_phone_stored_in_record(self):
-        add_phone(["Alice", "0987654321"])
-        self.assertEqual(len(book.find("Alice").phones), 2)
+        add_phone(self.book, ["Alice", "0987654321"])
+        self.assertEqual(len(self.book.find("Alice").phones), 2)
 
     def test_add_phone_contact_not_found(self):
-        result = add_phone(["Bob", "0987654321"])
+        result = add_phone(self.book, ["Bob", "0987654321"])
         self.assertIn("ERR", result)
 
     def test_add_phone_duplicate(self):
-        result = add_phone(["Alice", "1234567890"])
+        result = add_phone(self.book, ["Alice", "1234567890"])
         self.assertIn("ERR", result)
 
     def test_add_phone_invalid(self):
-        result = add_phone(["Alice", "123"])
+        result = add_phone(self.book, ["Alice", "123"])
         self.assertIn("ERR", result)
 
     def test_add_phone_missing_args(self):
-        result = add_phone(["Alice"])
+        result = add_phone(self.book, ["Alice"])
         self.assertIn("ERR", result)
 
 
 class TestUpdatePhone(unittest.TestCase):
     def setUp(self):
-        book.data.clear()
-        create_contact(["Alice", "1234567890"])
+        self.book = AddressBook()
+        create_contact(self.book, ["Alice", "1234567890"])
 
     def test_update_success(self):
-        result = update_phone(["Alice", "1234567890", "0987654321"])
+        result = update_phone(self.book, ["Alice", "1234567890", "0987654321"])
         self.assertIn("0987654321", result)
 
     def test_update_changes_phone_value(self):
-        update_phone(["Alice", "1234567890", "0987654321"])
-        self.assertEqual(book.find("Alice").phones[0].value, "0987654321")
+        update_phone(self.book, ["Alice", "1234567890", "0987654321"])
+        self.assertEqual(self.book.find("Alice").phones[0].value, "0987654321")
 
     def test_update_keeps_phone_count(self):
-        update_phone(["Alice", "1234567890", "0987654321"])
-        self.assertEqual(len(book.find("Alice").phones), 1)
+        update_phone(self.book, ["Alice", "1234567890", "0987654321"])
+        self.assertEqual(len(self.book.find("Alice").phones), 1)
 
     def test_update_contact_not_found(self):
-        result = update_phone(["Bob", "1234567890", "0987654321"])
+        result = update_phone(self.book, ["Bob", "1234567890", "0987654321"])
         self.assertIn("ERR", result)
 
     def test_update_old_phone_not_found(self):
-        result = update_phone(["Alice", "0000000000", "0987654321"])
+        result = update_phone(self.book, ["Alice", "0000000000", "0987654321"])
         self.assertIn("ERR", result)
 
     def test_update_invalid_new_phone(self):
-        result = update_phone(["Alice", "1234567890", "123"])
+        result = update_phone(self.book, ["Alice", "1234567890", "123"])
         self.assertIn("ERR", result)
 
     def test_update_missing_args(self):
-        result = update_phone(["Alice", "1234567890"])
+        result = update_phone(self.book, ["Alice", "1234567890"])
         self.assertIn("ERR", result)
 
 
 class TestSearchContact(unittest.TestCase):
     def setUp(self):
-        book.data.clear()
-        create_contact(["Alice", "1234567890"])
+        self.book = AddressBook()
+        create_contact(self.book, ["Alice", "1234567890"])
 
     def test_search_success(self):
-        result = search_contact(["Alice"])
+        result = search_contact(self.book, ["Alice"])
         self.assertIn("Alice", result)
         self.assertIn("1234567890", result)
 
     def test_search_shows_all_phones(self):
-        add_phone(["Alice", "0987654321"])
-        result = search_contact(["Alice"])
+        add_phone(self.book, ["Alice", "0987654321"])
+        result = search_contact(self.book, ["Alice"])
         self.assertIn("1234567890", result)
         self.assertIn("0987654321", result)
 
     def test_search_not_found(self):
-        result = search_contact(["Bob"])
+        result = search_contact(self.book, ["Bob"])
         self.assertIn("ERR", result)
 
     def test_search_case_sensitive(self):
-        result = search_contact(["alice"])
+        result = search_contact(self.book, ["alice"])
         self.assertIn("ERR", result)
 
     def test_search_missing_args(self):
-        result = search_contact([])
+        result = search_contact(self.book, [])
         self.assertIn("ERR", result)
 
     def test_search_contact_no_phones(self):
         record = Record("NoPhone")
-        book.add_record(record)
-        result = search_contact(["NoPhone"])
+        self.book.add_record(record)
+        result = search_contact(self.book, ["NoPhone"])
         self.assertIn("no phones", result)
 
 
 class TestRemovePhone(unittest.TestCase):
     def setUp(self):
-        book.data.clear()
-        create_contact(["Alice", "1234567890"])
+        self.book = AddressBook()
+        create_contact(self.book, ["Alice", "1234567890"])
 
     def test_remove_one_phone(self):
-        add_phone(["Alice", "0987654321"])
-        result = remove_phone(["Alice", "1234567890"])
+        add_phone(self.book, ["Alice", "0987654321"])
+        result = remove_phone(self.book, ["Alice", "1234567890"])
         self.assertIn("removed", result)
-        self.assertEqual(len(book.find("Alice").phones), 1)
+        self.assertEqual(len(self.book.find("Alice").phones), 1)
 
     def test_remove_last_phone_deletes_contact(self):
-        result = remove_phone(["Alice", "1234567890"])
+        result = remove_phone(self.book, ["Alice", "1234567890"])
         self.assertIn("deleted", result)
-        self.assertIsNone(book.find("Alice"))
+        self.assertIsNone(self.book.find("Alice"))
 
     def test_remove_contact_not_found(self):
-        result = remove_phone(["Bob", "1234567890"])
+        result = remove_phone(self.book, ["Bob", "1234567890"])
         self.assertIn("ERR", result)
 
     def test_remove_phone_not_in_contact(self):
-        result = remove_phone(["Alice", "0000000000"])
+        result = remove_phone(self.book, ["Alice", "0000000000"])
         self.assertIn("ERR", result)
 
     def test_remove_missing_args(self):
-        result = remove_phone(["Alice"])
+        result = remove_phone(self.book, ["Alice"])
         self.assertIn("ERR", result)
 
 
 class TestDeleteContact(unittest.TestCase):
     def setUp(self):
-        book.data.clear()
-        create_contact(["Alice", "1234567890"])
+        self.book = AddressBook()
+        create_contact(self.book, ["Alice", "1234567890"])
 
     def test_delete_success(self):
-        result = delete_contact(["Alice"])
+        result = delete_contact(self.book, ["Alice"])
         self.assertIn("deleted", result)
 
     def test_delete_removes_from_book(self):
-        delete_contact(["Alice"])
-        self.assertIsNone(book.find("Alice"))
+        delete_contact(self.book, ["Alice"])
+        self.assertIsNone(self.book.find("Alice"))
 
     def test_delete_not_found(self):
-        result = delete_contact(["Bob"])
+        result = delete_contact(self.book, ["Bob"])
         self.assertIn("ERR", result)
 
     def test_delete_missing_args(self):
-        result = delete_contact([])
+        result = delete_contact(self.book, [])
         self.assertIn("ERR", result)
 
     def test_delete_only_target(self):
-        create_contact(["Bob", "0987654321"])
-        delete_contact(["Alice"])
-        self.assertIsNotNone(book.find("Bob"))
+        create_contact(self.book, ["Bob", "0987654321"])
+        delete_contact(self.book, ["Alice"])
+        self.assertIsNotNone(self.book.find("Bob"))
 
 
 class TestListContacts(unittest.TestCase):
     def setUp(self):
-        book.data.clear()
+        self.book = AddressBook()
 
     def test_list_empty(self):
-        result = list_contacts([])
+        result = list_contacts(self.book, [])
         self.assertIn("No contacts", result)
 
     def test_list_with_contacts(self):
-        create_contact(["Alice", "1234567890"])
-        result = list_contacts([])
+        create_contact(self.book, ["Alice", "1234567890"])
+        result = list_contacts(self.book, [])
         self.assertIn("Alice", result)
         self.assertIn("1234567890", result)
 
     def test_list_shows_multiple_phones(self):
-        create_contact(["Alice", "1234567890"])
-        add_phone(["Alice", "0987654321"])
-        result = list_contacts([])
+        create_contact(self.book, ["Alice", "1234567890"])
+        add_phone(self.book, ["Alice", "0987654321"])
+        result = list_contacts(self.book, [])
         self.assertIn("1234567890", result)
         self.assertIn("0987654321", result)
 
     def test_list_multiple_contacts(self):
-        create_contact(["Alice", "1234567890"])
-        create_contact(["Bob", "0987654321"])
-        result = list_contacts([])
+        create_contact(self.book, ["Alice", "1234567890"])
+        create_contact(self.book, ["Bob", "0987654321"])
+        result = list_contacts(self.book, [])
         self.assertIn("Alice", result)
         self.assertIn("Bob", result)
 
 
 class TestHelloHelp(unittest.TestCase):
+    def setUp(self):
+        self.book = AddressBook()
+
     def test_hello_returns_string(self):
-        self.assertIsInstance(hello([]), str)
+        self.assertIsInstance(hello(self.book, []), str)
 
     def test_hello_contains_help_hint(self):
-        self.assertIn("help", hello([]).lower())
+        self.assertIn("help", hello(self.book, []).lower())
 
     def test_show_help_returns_string(self):
-        self.assertIsInstance(show_help([]), str)
+        self.assertIsInstance(show_help(self.book, []), str)
 
     def test_help_text_contains_all_commands(self):
-        result = show_help([])
+        result = show_help(self.book, [])
         for cmd in ["create contact", "add phone", "update phone",
                     "remove phone", "delete contact", "search", "list contacts"]:
             self.assertIn(cmd, result)

@@ -1,15 +1,3 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/user/PycharmProjects/PythonFridaysSchool/.claude/hooks/save_pytest_log.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "hooks": {}
 }

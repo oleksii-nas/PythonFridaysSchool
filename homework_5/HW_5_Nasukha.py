@@ -1,9 +1,10 @@
 from collections import UserDict
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from datetime import date, datetime
+from typing import Callable, Dict, Generator, List, Optional, Set, Tuple
 
 
 # ===========================================================================
-# ДЕКОРАТОР — стиль ДЗ 3
+# ДЕКОРАТОР
 # ===========================================================================
 def input_error(func: Callable[..., str]) -> Callable[..., Optional[str]]:
     def inner(*args, **kwargs) -> Optional[str]:
@@ -26,10 +27,18 @@ class Field:
     """Базовий клас для всіх полів запису."""
 
     def __init__(self, value: str) -> None:
-        self.value: str = value
+        self.value = value  # викликає setter
+
+    @property
+    def value(self) -> str:
+        return self._value
+
+    @value.setter
+    def value(self, v: str) -> None:
+        self._value = v
 
     def __str__(self) -> str:
-        return str(self.value)
+        return str(self._value)
 
 
 class Name(Field):
@@ -44,90 +53,130 @@ class Name(Field):
 class Phone(Field):
     """
     Необов'язкове поле — номер телефону.
-    Валідація: рівно 10 цифр.
+    Валідація через setter: рівно 10 цифр.
     """
 
-    def __init__(self, value: str) -> None:
-        Phone._validate(value)
-        super().__init__(value)
-
-    @staticmethod
-    def _validate(phone: str) -> None:
+    @Field.value.setter
+    def value(self, phone: str) -> None:
         if not phone.isdigit() or len(phone) != 10:
             raise ValueError(
                 f"'{phone}' is not valid. Phone must contain exactly 10 digits."
             )
+        self._value = phone
+
+
+class Birthday(Field):
+    """
+    Необов'язкове поле — дата народження.
+    Валідація через setter: формат DD.MM.YYYY.
+    Зберігається як datetime.date.
+    """
+
+    _DATE_FORMAT = "%d.%m.%Y"
+
+    @Field.value.setter
+    def value(self, bday: str) -> None:
+        try:
+            self._value = datetime.strptime(bday, self._DATE_FORMAT).date()
+        except ValueError:
+            raise ValueError(
+                f"'{bday}' is not valid. Birthday must be in DD.MM.YYYY format."
+            )
+
+    def __str__(self) -> str:
+        return self._value.strftime(self._DATE_FORMAT)
 
 
 class Record:
     """
-    Запис контакту: ім'я + список телефонів.
-    Відповідає за додавання / видалення / редагування полів.
+    Запис контакту: ім'я + список телефонів + необов'язковий день народження.
     """
 
-    name: Name
-    phones: List[Phone]
-
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, birthday: Optional[str] = None) -> None:
         self.name: Name = Name(name)
         self.phones: List[Phone] = []
+        self.birthday: Optional[Birthday] = Birthday(birthday) if birthday else None
+
+    # --- телефони ---
 
     def add_phone(self, phone: str) -> None:
-        """Додати новий номер телефону."""
         if self.find_phone(phone):
             raise ValueError(f"Phone {phone} already exists for '{self.name.value}'.")
         self.phones.append(Phone(phone))
 
     def remove_phone(self, phone: str) -> None:
-        """Видалити номер телефону."""
         found: Optional[Phone] = self.find_phone(phone)
         if found is None:
             raise ValueError(f"Phone {phone} not found for '{self.name.value}'.")
         self.phones.remove(found)
 
     def edit_phone(self, old_phone: str, new_phone: str) -> None:
-        """Замінити існуючий номер на новий."""
         found: Optional[Phone] = self.find_phone(old_phone)
         if found is None:
             raise ValueError(f"Phone {old_phone} not found for '{self.name.value}'.")
-        found.value = Phone(new_phone).value
+        found.value = new_phone  # проходить через Phone.value.setter → валідація
 
     def find_phone(self, phone: str) -> Optional[Phone]:
-        """Знайти об'єкт Phone за значенням. Повертає Phone або None."""
         return next((p for p in self.phones if p.value == phone), None)
+
+    # --- день народження ---
+
+    def add_birthday(self, birthday: str) -> None:
+        self.birthday = Birthday(birthday)
+
+    def days_to_birthday(self, _today: Optional[date] = None) -> Optional[int]:
+        """Повертає кількість днів до наступного дня народження (0 = сьогодні)."""
+        if self.birthday is None:
+            return None
+        today: date = _today or date.today()
+        bday: date = self.birthday.value
+        try:
+            next_bday = bday.replace(year=today.year)
+        except ValueError:
+            # 29 лютого у не-високосному році → 1 березня
+            next_bday = date(today.year, 3, 1)
+        if next_bday < today:
+            try:
+                next_bday = bday.replace(year=today.year + 1)
+            except ValueError:
+                next_bday = date(today.year + 1, 3, 1)
+        return (next_bday - today).days
 
     def __str__(self) -> str:
         phones_str: str = "; ".join(p.value for p in self.phones)
-        return f"Contact name: {self.name.value}, phones: {phones_str}"
+        bday_str = f", birthday: {self.birthday}" if self.birthday else ""
+        return f"Contact name: {self.name.value}, phones: {phones_str}{bday_str}"
 
 
 class AddressBook(UserDict[str, Record]):
     """
     Адресна книга — успадковується від UserDict.
-    Ключ: ім'я контакту (str), Значення: об'єкт Record.
+    Підтримує ітерацію по сторінках через iterator().
     """
 
     def add_record(self, record: Record) -> None:
-        """Додати запис до книги."""
         self.data[record.name.value] = record
 
     def find(self, name: str) -> Optional[Record]:
-        """Знайти запис за іменем. Повертає Record або None."""
         return self.data.get(name)
 
     def delete(self, name: str) -> None:
-        """Видалити запис за іменем."""
         if name not in self.data:
             raise KeyError(f"'{name}'")
         del self.data[name]
 
+    def iterator(self, n: int) -> Generator[List[Record], None, None]:
+        """Генератор, що повертає записи порціями по n штук (пагінація)."""
+        records = list(self.data.values())
+        for i in range(0, len(records), n):
+            yield records[i : i + n]
+
 
 # ===========================================================================
-# ХЕНДЛЕРИ — стиль ДЗ 3
+# ХЕНДЛЕРИ
 # ===========================================================================
 @input_error
 def create_contact(book: AddressBook, args: List[str]) -> str:
-    """create contact <name> <phone>"""
     name, phone = args[0], args[1]
     if book.find(name):
         return f"Contact '{name}' already exists. Use 'add phone {name} <phone>' to add a number."
@@ -139,7 +188,6 @@ def create_contact(book: AddressBook, args: List[str]) -> str:
 
 @input_error
 def add_phone(book: AddressBook, args: List[str]) -> str:
-    """add phone <name> <phone>"""
     name, phone = args[0], args[1]
     record: Optional[Record] = book.find(name)
     if record is None:
@@ -150,7 +198,6 @@ def add_phone(book: AddressBook, args: List[str]) -> str:
 
 @input_error
 def update_phone(book: AddressBook, args: List[str]) -> str:
-    """update phone <name> <old_phone> <new_phone>"""
     name, old_phone, new_phone = args[0], args[1], args[2]
     record: Optional[Record] = book.find(name)
     if record is None:
@@ -161,7 +208,6 @@ def update_phone(book: AddressBook, args: List[str]) -> str:
 
 @input_error
 def search_contact(book: AddressBook, args: List[str]) -> str:
-    """search <name>"""
     name: str = args[0]
     record: Optional[Record] = book.find(name)
     if record is None:
@@ -178,7 +224,6 @@ def search_contact(book: AddressBook, args: List[str]) -> str:
 
 @input_error
 def remove_phone(book: AddressBook, args: List[str]) -> str:
-    """remove phone <name> <phone>"""
     name, phone = args[0], args[1]
     record: Optional[Record] = book.find(name)
     if record is None:
@@ -192,7 +237,6 @@ def remove_phone(book: AddressBook, args: List[str]) -> str:
 
 @input_error
 def delete_contact(book: AddressBook, args: List[str]) -> str:
-    """delete contact <name>"""
     name: str = args[0]
     book.delete(name)
     return f"Contact '{name}' deleted."
@@ -200,11 +244,36 @@ def delete_contact(book: AddressBook, args: List[str]) -> str:
 
 @input_error
 def list_contacts(book: AddressBook, args: List[str]) -> str:
-    """list contacts"""
     if not book.data:
         return "No contacts saved yet. Use 'create contact <name> <phone>' to add one."
     lines: List[str] = [f"  {i}. {record}" for i, record in enumerate(book.values(), 1)]
     return "All contacts:\n" + "\n".join(lines)
+
+
+@input_error
+def add_birthday(book: AddressBook, args: List[str]) -> str:
+    """add birthday <name> <DD.MM.YYYY>"""
+    name, bday = args[0], args[1]
+    record: Optional[Record] = book.find(name)
+    if record is None:
+        raise KeyError(f"'{name}'")
+    record.add_birthday(bday)
+    return f"Birthday {bday} set for '{name}'."
+
+
+@input_error
+def birthday_cmd(book: AddressBook, args: List[str]) -> str:
+    """birthday <name>"""
+    name: str = args[0]
+    record: Optional[Record] = book.find(name)
+    if record is None:
+        raise KeyError(f"'{name}'")
+    days = record.days_to_birthday()
+    if days is None:
+        return f"Contact '{name}' has no birthday set."
+    if days == 0:
+        return f"Today is {name}'s birthday!"
+    return f"{days} day(s) until {name}'s birthday."
 
 
 def hello(book: AddressBook, args: List[str]) -> str:
@@ -215,20 +284,22 @@ def hello(book: AddressBook, args: List[str]) -> str:
 # ДОВІДКА
 # ===========================================================================
 HELP_TEXT: str = """
-╔══════════════════════════════════════════════════════════════╗
-║                     AVAILABLE COMMANDS                       ║
-╠══════════════════════════════════════════════════════════════╣
-║  hello                                — greeting             ║
-║  create contact <name> <phone>        — add new contact      ║
-║  add phone <name> <phone>             — add extra phone      ║
-║  update phone <name> <old> <new>      — change phone number  ║
-║  remove phone <name> <phone>          — delete one phone     ║
-║  delete contact <name>                — delete contact       ║
-║  search <name>                        — find contact         ║
-║  list contacts                        — show all contacts    ║
-╠══════════════════════════════════════════════════════════════╣
-║  exit  |  close  |  good bye          — quit the program     ║
-╚══════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════╗
+║                      AVAILABLE COMMANDS                          ║
+╠══════════════════════════════════════════════════════════════════╣
+║  hello                                  — greeting               ║
+║  create contact <name> <phone>          — add new contact        ║
+║  add phone <name> <phone>               — add extra phone        ║
+║  update phone <name> <old> <new>        — change phone number    ║
+║  remove phone <name> <phone>            — delete one phone       ║
+║  delete contact <name>                  — delete contact         ║
+║  search <name>                          — find contact           ║
+║  list contacts                          — show all contacts      ║
+║  add birthday <name> <DD.MM.YYYY>       — set birthday           ║
+║  birthday <name>                        — days to next birthday  ║
+╠══════════════════════════════════════════════════════════════════╣
+║  exit  |  close  |  good bye            — quit the program       ║
+╚══════════════════════════════════════════════════════════════════╝
   Tip: phone must be exactly 10 digits  |  names are case-sensitive
 """
 
@@ -238,18 +309,20 @@ def show_help(book: AddressBook, args: List[str]) -> str:
 
 
 # ===========================================================================
-# ТАБЛИЦЯ КОМАНД — стиль ДЗ 3
+# ТАБЛИЦЯ КОМАНД
 # ===========================================================================
 COMMANDS: Dict[str, Callable[[AddressBook, List[str]], Optional[str]]] = {
     "hello": hello,
     "help": show_help,
     "create contact": create_contact,
     "add phone": add_phone,
+    "add birthday": add_birthday,
     "update phone": update_phone,
     "remove phone": remove_phone,
     "delete contact": delete_contact,
     "search": search_contact,
     "list contacts": list_contacts,
+    "birthday": birthday_cmd,
 }
 
 EXIT_COMMANDS: Set[str] = {"exit", "close", "good bye"}
@@ -257,7 +330,7 @@ TWO_WORD_KEYS: Set[str] = {k for k in list(COMMANDS) + list(EXIT_COMMANDS) if " 
 
 
 # ===========================================================================
-# ПАРСЕР — стиль ДЗ 3
+# ПАРСЕР
 # ===========================================================================
 def parse_input(user_input: str) -> Tuple[str, List[str]]:
     parts: List[str] = user_input.strip().split()
@@ -270,7 +343,7 @@ def parse_input(user_input: str) -> Tuple[str, List[str]]:
 
 
 # ===========================================================================
-# ГОЛОВНИЙ ЦИКЛ — стиль ДЗ 3
+# ГОЛОВНИЙ ЦИКЛ
 # ===========================================================================
 def main() -> None:
     print("Welcome to the Assistant Bot!")

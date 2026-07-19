@@ -15,6 +15,9 @@ env/
 htmlcov/
 .tox/
 
+# Runtime data
+address_book.pkl
+
 # IDE
 .idea/
 .vscode/

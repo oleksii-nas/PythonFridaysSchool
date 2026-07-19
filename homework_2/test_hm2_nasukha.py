@@ -75,6 +75,42 @@ class TestGetBirthdaysPerWeek(unittest.TestCase):
         result = bd.get_birthdays_per_week(users)
         self.assertTrue(set(result.keys()).issubset(allowed))
 
+    def test_feb29_birthday_does_not_crash_in_nonleap_year(self) -> None:
+        users = [{"name": "Leap Person", "birthday": date(1992, 2, 29)}]
+        # 2026 — невисокосний рік; 29.02 трактується як 01.03
+        result = bd.get_birthdays_per_week(users, _today=date(2026, 2, 26))
+        names = [name for day in result.values() for name in day]
+        self.assertIn("Leap Person", names)
+
+    def test_feb29_birthday_far_from_march_is_excluded(self) -> None:
+        users = [{"name": "Leap Person", "birthday": date(1992, 2, 29)}]
+        result = bd.get_birthdays_per_week(users, _today=date(2026, 7, 15))
+        names = [name for day in result.values() for name in day]
+        self.assertNotIn("Leap Person", names)
+
+    def test_boundary_six_days_ahead_included(self) -> None:
+        today = date(2026, 7, 15)  # середа
+        users = [{"name": "Edge In", "birthday": today + timedelta(days=6)}]
+        result = bd.get_birthdays_per_week(users, _today=today)
+        names = [name for day in result.values() for name in day]
+        self.assertIn("Edge In", names)
+
+    def test_boundary_seven_days_ahead_excluded(self) -> None:
+        today = date(2026, 7, 15)
+        users = [{"name": "Edge Out", "birthday": today + timedelta(days=7)}]
+        result = bd.get_birthdays_per_week(users, _today=today)
+        names = [name for day in result.values() for name in day]
+        self.assertNotIn("Edge Out", names)
+
+    def test_multiple_users_same_day_grouped(self) -> None:
+        wednesday = next_weekday(2)
+        users = [
+            {"name": "First", "birthday": wednesday},
+            {"name": "Second", "birthday": wednesday},
+        ]
+        result = bd.get_birthdays_per_week(users)
+        self.assertEqual(len(result.get("Wednesday", [])), 2)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

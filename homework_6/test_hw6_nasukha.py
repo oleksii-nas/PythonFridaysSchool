@@ -477,6 +477,22 @@ class TestAddressBookPersistence(unittest.TestCase):
         loaded = AddressBook.load(self.path)
         self.assertEqual(len(loaded.data), 0)
 
+    def test_load_corrupted_file_returns_empty_book(self):
+        Path(self.path).write_bytes(b"this is not a pickle at all")
+        loaded = AddressBook.load(self.path)
+        self.assertEqual(len(loaded.data), 0)
+
+    def test_load_truncated_pickle_returns_empty_book(self):
+        self._make_book().save(self.path)
+        data = Path(self.path).read_bytes()
+        Path(self.path).write_bytes(data[: len(data) // 2])
+        loaded = AddressBook.load(self.path)
+        self.assertEqual(len(loaded.data), 0)
+
+    def test_save_leaves_no_tmp_file(self):
+        self._make_book().save(self.path)
+        self.assertFalse(Path(f"{self.path}.tmp").exists())
+
 
 # ===========================================================================
 # Хендлери — create_contact, add_phone, update_phone

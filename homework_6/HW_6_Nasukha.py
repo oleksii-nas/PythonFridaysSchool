@@ -1,3 +1,4 @@
+import os
 import pickle
 from collections import UserDict
 from datetime import date, datetime
@@ -194,21 +195,30 @@ class AddressBook(UserDict[str, Record]):
     # --- збереження / завантаження ---
 
     def save(self, path: str) -> None:
-        """Зберігає адресну книгу у бінарний файл через pickle."""
-        with open(path, "wb") as f:
+        """
+        Зберігає адресну книгу у бінарний файл через pickle.
+        Запис атомарний: спочатку у тимчасовий файл, потім заміна,
+        щоб збій під час запису не знищив попередні дані.
+        """
+        tmp_path = f"{path}.tmp"
+        with open(tmp_path, "wb") as f:
             pickle.dump(self.data, f)
+        os.replace(tmp_path, path)
 
     @classmethod
     def load(cls, path: str) -> "AddressBook":
         """
         Завантажує адресну книгу з файлу.
-        Якщо файл не існує — повертає порожню книгу.
+        Якщо файл не існує або пошкоджений — повертає порожню книгу.
         """
         book = cls()
         p = Path(path)
         if p.exists():
-            with open(path, "rb") as f:
-                book.data = pickle.load(f)
+            try:
+                with open(path, "rb") as f:
+                    book.data = pickle.load(f)
+            except (pickle.UnpicklingError, EOFError, AttributeError, ValueError):
+                print(f"WARN: could not read '{path}' — starting with an empty book.")
         return book
 
 
@@ -409,24 +419,29 @@ def main() -> None:
         print(f"Loaded {contacts_count} contact(s) from disk.")
     print("Type 'help' to see all available commands.\n")
 
-    while True:
-        user_input: str = input(">>> ")
-        if not user_input.strip():
-            continue
-        command, args = parse_input(user_input)
-        if command in EXIT_COMMANDS:
-            book.save(SAVE_FILE)
-            print("Address book saved. Good bye!")
-            break
-        handler: Optional[Callable[[AddressBook, List[str]], Optional[str]]] = (
-            COMMANDS.get(command)
-        )
-        if handler is None:
-            print(
-                f"Unknown command '{command}'. Type 'help' to see available commands."
+    try:
+        while True:
+            user_input: str = input(">>> ")
+            if not user_input.strip():
+                continue
+            command, args = parse_input(user_input)
+            if command in EXIT_COMMANDS:
+                print("Address book saved. Good bye!")
+                break
+            handler: Optional[Callable[[AddressBook, List[str]], Optional[str]]] = (
+                COMMANDS.get(command)
             )
-        else:
-            print(handler(book, args))
+            if handler is None:
+                print(
+                    f"Unknown command '{command}'. Type 'help' to see available commands."
+                )
+            else:
+                print(handler(book, args))
+    except (KeyboardInterrupt, EOFError):
+        print("\nInterrupted — saving address book...")
+    finally:
+        # Дані зберігаються за будь-якого сценарію виходу, включно з Ctrl+C
+        book.save(SAVE_FILE)
 
 
 if __name__ == "__main__":

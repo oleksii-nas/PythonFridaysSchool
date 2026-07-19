@@ -7,8 +7,22 @@ users = [
     {"name": "Zhenya Samokat", "birthday": date(1992, 4, 26)},
 ]
 
-def get_birthdays_per_week(users):
-    today = date.today()
+def _next_birthday(birthday: date, today: date) -> date:
+    """Найближча річниця дня народження (29.02 у невисокосний рік → 01.03)."""
+    try:
+        this_year = birthday.replace(year=today.year)
+    except ValueError:
+        this_year = date(today.year, 3, 1)
+    if this_year >= today:
+        return this_year
+    try:
+        return birthday.replace(year=today.year + 1)
+    except ValueError:
+        return date(today.year + 1, 3, 1)
+
+
+def get_birthdays_per_week(users, _today=None):
+    today = _today or date.today()
 
     result = {day: [] for day in calendar.day_name[:5]}
 
@@ -16,10 +30,7 @@ def get_birthdays_per_week(users):
         name = user["name"]
         birthday = user["birthday"]
 
-        birthday_this_year = birthday.replace(year=today.year)
-
-        if birthday_this_year < today:
-            birthday_this_year = birthday.replace(year=today.year + 1)
+        birthday_this_year = _next_birthday(birthday, today)
 
         delta_days = (birthday_this_year - today).days
 
@@ -42,4 +53,4 @@ def main():
 
 
 if __name__ == "__main__":
-    print(get_birthdays_per_week(users))
+    main()

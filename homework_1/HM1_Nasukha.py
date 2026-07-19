@@ -119,13 +119,15 @@ def handle_archive(file_path: Path, target_root: Path) -> None:
         shutil.unpack_archive(str(file_path), str(archive_folder))
         file_path.unlink()
     except (shutil.ReadError, ValueError):
+        shutil.rmtree(archive_folder, ignore_errors=True)
         fallback_name = f"{normalized_stem}{file_path.suffix}"
         target_path = make_unique_path(archives_dir, fallback_name)
         shutil.move(str(file_path), str(target_path))
 
 
 def process_folder(folder_path: Path, root_path: Path) -> None:
-    for item in folder_path.iterdir():
+    # Знімок вмісту: під час обходу файли переміщуються і створюються нові теки
+    for item in list(folder_path.iterdir()):
         if item.is_dir():
             if item.name in {*CATEGORY_MAP.keys(), OTHER_CATEGORY}:
                 continue

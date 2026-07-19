@@ -20,20 +20,24 @@ contacts = {}
 
 
 def validate_phone(phone: str) -> str:
-    """Валідація номера — тільки цифри, мінімум 7 символів."""
+    """Валідація номера — тільки цифри, мінімум 7 символів.
+
+    Повертає очищений номер (без '+', '-' та пробілів), щоб контакти
+    зберігали єдиний формат і номер можна було знайти незалежно від
+    того, як його ввели.
+    """
     cleaned = phone.replace("+", "").replace("-", "").replace(" ", "")
     if not cleaned.isdigit():
         raise ValueError(f"'{phone}' is not a valid phone number. Use digits only.")
     if len(cleaned) < 7:
         raise ValueError(f"'{phone}' is too short. Minimum 7 digits required.")
-    return phone
+    return cleaned
 
 
 @input_error
 def create_contact(args: List[str]) -> str:
     """create contact <name> <phone> — додати новий контакт"""
-    name, phone = args[0], args[1]
-    validate_phone(phone)
+    name, phone = args[0], validate_phone(args[1])
     if name in contacts:
         return f"Contact '{name}' already exists. Use 'add phone {name} <phone>' to add another number."
     contacts[name] = [phone]
@@ -43,8 +47,7 @@ def create_contact(args: List[str]) -> str:
 @input_error
 def add_phone(args: List[str]) -> str:
     """add phone <name> <phone> — додати ще один номер існуючому контакту"""
-    name, phone = args[0], args[1]
-    validate_phone(phone)
+    name, phone = args[0], validate_phone(args[1])
     if name not in contacts:
         raise KeyError(name)
     if phone in contacts[name]:
@@ -56,8 +59,7 @@ def add_phone(args: List[str]) -> str:
 @input_error
 def update_phone(args: List[str]) -> str:
     """update phone <name> <old_phone> <new_phone> — змінити номер"""
-    name, old_phone, new_phone = args[0], args[1], args[2]
-    validate_phone(new_phone)
+    name, old_phone, new_phone = args[0], args[1], validate_phone(args[2])
     if name not in contacts:
         raise KeyError(name)
     if old_phone not in contacts[name]:

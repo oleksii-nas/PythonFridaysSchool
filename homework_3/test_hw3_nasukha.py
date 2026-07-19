@@ -58,23 +58,23 @@ class TestValidatePhone(BotTestBase):
         print(f"\n  input:  '{phone}' -> result: '{result}'")
         self.assertEqual(result, phone)
 
-    def test_valid_with_plus(self) -> None:
+    def test_valid_with_plus_returns_cleaned(self) -> None:
         phone = "+380671234567"
         result = bot.validate_phone(phone)
         print(f"\n  input:  '{phone}' -> result: '{result}'")
-        self.assertEqual(result, phone)
+        self.assertEqual(result, "380671234567")
 
-    def test_valid_with_dashes(self) -> None:
+    def test_valid_with_dashes_returns_cleaned(self) -> None:
         phone = "067-123-45-67"
         result = bot.validate_phone(phone)
         print(f"\n  input:  '{phone}' -> result: '{result}'")
-        self.assertEqual(result, phone)
+        self.assertEqual(result, "0671234567")
 
-    def test_valid_with_spaces(self) -> None:
+    def test_valid_with_spaces_returns_cleaned(self) -> None:
         phone = "067 123 45 67"
         result = bot.validate_phone(phone)
         print(f"\n  input:  '{phone}' -> result: '{result}'")
-        self.assertEqual(result, phone)
+        self.assertEqual(result, "0671234567")
 
     def test_valid_minimum_length(self) -> None:
         phone = "1234567"
@@ -109,6 +109,14 @@ class TestValidatePhone(BotTestBase):
         with self.assertRaises(ValueError) as ctx:
             bot.validate_phone(phone)
         print(f"  raised: ValueError('{ctx.exception}')")
+
+    def test_contact_created_with_plus_found_by_digits(self) -> None:
+        bot.create_contact(["Andrii", "+380671234567"])
+        result = bot.remove_phone(["Andrii", "380671234567"])
+        print(f"\n  created with '+380671234567', removed by '380671234567'")
+        print(f"  result: '{result}'")
+        self.assertNotIn("not found", result)
+        self.assertNotIn("Andrii", bot.contacts)
 
 
 # ===========================================================================

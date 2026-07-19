@@ -136,6 +136,11 @@ class TestHandleArchive(SorterTestBase):
         self.assertFalse(archive.exists())
         self.assertTrue((self.tmp / "archives" / "broken.zip").exists())
 
+    def test_corrupt_archive_leaves_no_empty_folder(self) -> None:
+        archive = self.touch("broken.zip")
+        sorter.handle_archive(archive, self.tmp)
+        self.assertFalse((self.tmp / "archives" / "broken").exists())
+
 
 # ===========================================================================
 # 6. process_folder
@@ -157,6 +162,21 @@ class TestProcessFolder(SorterTestBase):
         self.touch("mystery.xyz")
         sorter.process_folder(self.tmp, self.tmp)
         self.assertTrue((self.tmp / sorter.OTHER_CATEGORY / "mystery.xyz").exists())
+
+    def test_second_run_on_sorted_tree_is_idempotent(self) -> None:
+        self.touch("note.txt")
+        self.touch("photo.jpg")
+        sorter.process_folder(self.tmp, self.tmp)
+        sorter.process_folder(self.tmp, self.tmp)
+        self.assertTrue((self.tmp / "documents" / "note.txt").exists())
+        self.assertTrue((self.tmp / "images" / "photo.jpg").exists())
+
+    def test_same_names_from_different_subdirs_both_kept(self) -> None:
+        self.touch("a/note.txt")
+        self.touch("b/note.txt")
+        sorter.process_folder(self.tmp, self.tmp)
+        docs = sorted(p.name for p in (self.tmp / "documents").iterdir())
+        self.assertEqual(len(docs), 2)
 
 
 if __name__ == "__main__":

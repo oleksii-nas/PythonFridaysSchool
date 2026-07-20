@@ -5,7 +5,7 @@ import pickle
 from collections import UserDict
 from datetime import date, datetime
 from pathlib import Path
-from typing import Callable, Dict, Generator, List, Set, Tuple
+from typing import Any, Callable, Dict, Generator, List, Set, Tuple
 
 
 # ===========================================================================
@@ -30,6 +30,8 @@ def input_error(func: Callable[..., str]) -> Callable[..., str | None]:
 # ===========================================================================
 class Field:
     """Базовий клас для всіх полів запису."""
+
+    _value: Any  # підкласи (Phone, Birthday) зберігають різні типи (str, date)
 
     def __init__(self, value: str) -> None:
         self.value = value
@@ -61,7 +63,11 @@ class Phone(Field):
     Валідація через setter: рівно 10 цифр.
     """
 
-    @Field.value.setter
+    @property
+    def value(self) -> str:
+        return self._value
+
+    @value.setter
     def value(self, phone: str) -> None:
         if not phone.isdigit() or len(phone) != 10:
             raise ValueError(
@@ -78,8 +84,9 @@ class Birthday(Field):
     """
 
     _DATE_FORMAT = "%d.%m.%Y"
+    _value: date
 
-    @Field.value.getter
+    @property
     def value(self) -> date:
         return self._value
 
@@ -180,9 +187,9 @@ class AddressBook(UserDict[str, Record]):
         """
         q = query.lower()
         return [
-            r for r in self.data.values()
-            if q in r.name.value.lower()
-            or any(q in p.value for p in r.phones)
+            r
+            for r in self.data.values()
+            if q in r.name.value.lower() or any(q in p.value for p in r.phones)
         ]
 
     # --- базові операції ---

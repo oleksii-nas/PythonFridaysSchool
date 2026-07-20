@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import UserDict
 from datetime import date, datetime
-from typing import Callable, Dict, Generator, List, Set, Tuple
+from typing import Any, Callable, Dict, Generator, List, Set, Tuple
 
 
 # ===========================================================================
@@ -27,6 +27,8 @@ def input_error(func: Callable[..., str]) -> Callable[..., str | None]:
 # ===========================================================================
 class Field:
     """Базовий клас для всіх полів запису."""
+
+    _value: Any  # підкласи (Phone, Birthday) зберігають різні типи (str, date)
 
     def __init__(self, value: str) -> None:
         self.value = value  # викликає setter
@@ -58,7 +60,11 @@ class Phone(Field):
     Валідація через setter: рівно 10 цифр.
     """
 
-    @Field.value.setter
+    @property
+    def value(self) -> str:
+        return self._value
+
+    @value.setter
     def value(self, phone: str) -> None:
         if not phone.isdigit() or len(phone) != 10:
             raise ValueError(
@@ -75,8 +81,9 @@ class Birthday(Field):
     """
 
     _DATE_FORMAT = "%d.%m.%Y"
+    _value: date
 
-    @Field.value.getter
+    @property
     def value(self) -> date:
         return self._value
 
@@ -369,8 +376,8 @@ def main() -> None:
         if command in EXIT_COMMANDS:
             print("Good bye!")
             break
-        handler: Callable[[AddressBook, List[str]], str | None] | None = (
-            COMMANDS.get(command)
+        handler: Callable[[AddressBook, List[str]], str | None] | None = COMMANDS.get(
+            command
         )
         if handler is None:
             print(

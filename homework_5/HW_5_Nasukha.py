@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 from collections import UserDict
 from datetime import date, datetime
-from typing import Callable, Dict, Generator, List, Optional, Set, Tuple
+from typing import Callable, Dict, Generator, List, Set, Tuple
 
 
 # ===========================================================================
 # ДЕКОРАТОР
 # ===========================================================================
-def input_error(func: Callable[..., str]) -> Callable[..., Optional[str]]:
-    def inner(*args, **kwargs) -> Optional[str]:
+def input_error(func: Callable[..., str]) -> Callable[..., str | None]:
+    def inner(*args, **kwargs) -> str | None:
         try:
             return func(*args, **kwargs)
         except KeyError as e:
@@ -74,7 +76,11 @@ class Birthday(Field):
 
     _DATE_FORMAT = "%d.%m.%Y"
 
-    @Field.value.setter
+    @Field.value.getter
+    def value(self) -> date:
+        return self._value
+
+    @value.setter
     def value(self, bday: str) -> None:
         try:
             self._value = datetime.strptime(bday, self._DATE_FORMAT).date()
@@ -92,10 +98,14 @@ class Record:
     Запис контакту: ім'я + список телефонів + необов'язковий день народження.
     """
 
-    def __init__(self, name: str, birthday: Optional[str] = None) -> None:
-        self.name: Name = Name(name)
-        self.phones: List[Phone] = []
-        self.birthday: Optional[Birthday] = Birthday(birthday) if birthday else None
+    name: Name
+    phones: List[Phone]
+    birthday: Birthday | None
+
+    def __init__(self, name: str, birthday: str | None = None) -> None:
+        self.name = Name(name)
+        self.phones = []
+        self.birthday: Birthday | None = Birthday(birthday) if birthday else None
 
     # --- телефони ---
 
@@ -105,18 +115,18 @@ class Record:
         self.phones.append(Phone(phone))
 
     def remove_phone(self, phone: str) -> None:
-        found: Optional[Phone] = self.find_phone(phone)
+        found: Phone | None = self.find_phone(phone)
         if found is None:
             raise ValueError(f"Phone {phone} not found for '{self.name.value}'.")
         self.phones.remove(found)
 
     def edit_phone(self, old_phone: str, new_phone: str) -> None:
-        found: Optional[Phone] = self.find_phone(old_phone)
+        found: Phone | None = self.find_phone(old_phone)
         if found is None:
             raise ValueError(f"Phone {old_phone} not found for '{self.name.value}'.")
         found.value = new_phone  # проходить через Phone.value.setter → валідація
 
-    def find_phone(self, phone: str) -> Optional[Phone]:
+    def find_phone(self, phone: str) -> Phone | None:
         return next((p for p in self.phones if p.value == phone), None)
 
     # --- день народження ---
@@ -124,7 +134,7 @@ class Record:
     def add_birthday(self, birthday: str) -> None:
         self.birthday = Birthday(birthday)
 
-    def days_to_birthday(self, _today: Optional[date] = None) -> Optional[int]:
+    def days_to_birthday(self, _today: date | None = None) -> int | None:
         """Повертає кількість днів до наступного дня народження (0 = сьогодні)."""
         if self.birthday is None:
             return None
@@ -157,7 +167,7 @@ class AddressBook(UserDict[str, Record]):
     def add_record(self, record: Record) -> None:
         self.data[record.name.value] = record
 
-    def find(self, name: str) -> Optional[Record]:
+    def find(self, name: str) -> Record | None:
         return self.data.get(name)
 
     def delete(self, name: str) -> None:
@@ -189,7 +199,7 @@ def create_contact(book: AddressBook, args: List[str]) -> str:
 @input_error
 def add_phone(book: AddressBook, args: List[str]) -> str:
     name, phone = args[0], args[1]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     record.add_phone(phone)
@@ -199,7 +209,7 @@ def add_phone(book: AddressBook, args: List[str]) -> str:
 @input_error
 def update_phone(book: AddressBook, args: List[str]) -> str:
     name, old_phone, new_phone = args[0], args[1], args[2]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     record.edit_phone(old_phone, new_phone)
@@ -209,7 +219,7 @@ def update_phone(book: AddressBook, args: List[str]) -> str:
 @input_error
 def search_contact(book: AddressBook, args: List[str]) -> str:
     name: str = args[0]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     phones: str = "\n  ".join(
@@ -225,7 +235,7 @@ def search_contact(book: AddressBook, args: List[str]) -> str:
 @input_error
 def remove_phone(book: AddressBook, args: List[str]) -> str:
     name, phone = args[0], args[1]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     record.remove_phone(phone)
@@ -254,7 +264,7 @@ def list_contacts(book: AddressBook, args: List[str]) -> str:
 def add_birthday(book: AddressBook, args: List[str]) -> str:
     """add birthday <name> <DD.MM.YYYY>"""
     name, bday = args[0], args[1]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     record.add_birthday(bday)
@@ -265,7 +275,7 @@ def add_birthday(book: AddressBook, args: List[str]) -> str:
 def birthday_cmd(book: AddressBook, args: List[str]) -> str:
     """birthday <name>"""
     name: str = args[0]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     days = record.days_to_birthday()
@@ -311,7 +321,7 @@ def show_help(book: AddressBook, args: List[str]) -> str:
 # ===========================================================================
 # ТАБЛИЦЯ КОМАНД
 # ===========================================================================
-COMMANDS: Dict[str, Callable[[AddressBook, List[str]], Optional[str]]] = {
+COMMANDS: Dict[str, Callable[[AddressBook, List[str]], str | None]] = {
     "hello": hello,
     "help": show_help,
     "create contact": create_contact,
@@ -359,7 +369,7 @@ def main() -> None:
         if command in EXIT_COMMANDS:
             print("Good bye!")
             break
-        handler: Optional[Callable[[AddressBook, List[str]], Optional[str]]] = (
+        handler: Callable[[AddressBook, List[str]], str | None] | None = (
             COMMANDS.get(command)
         )
         if handler is None:

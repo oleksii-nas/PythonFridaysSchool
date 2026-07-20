@@ -1,10 +1,12 @@
-from typing import Callable, Dict, List, Optional, Tuple
+from __future__ import annotations
+
+from typing import Callable, Dict, List, Tuple
 
 
 def input_error(func: Callable) -> Callable:
-    def inner(*args, **kwargs) -> Optional[str]:
-        result: Optional[str] = None
-        error:  Optional[str] = None
+    def inner(*args, **kwargs) -> str | None:
+        result: str | None = None
+        error: str | None = None
         try:
             result = func(*args, **kwargs)
         except KeyError as e:

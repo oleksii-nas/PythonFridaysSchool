@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 from collections import UserDict
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Set, Tuple
 
 
 # ===========================================================================
 # ДЕКОРАТОР — стиль ДЗ 3
 # ===========================================================================
-def input_error(func: Callable[..., str]) -> Callable[..., Optional[str]]:
-    def inner(*args, **kwargs) -> Optional[str]:
+def input_error(func: Callable[..., str]) -> Callable[..., str | None]:
+    def inner(*args, **kwargs) -> str | None:
         try:
             return func(*args, **kwargs)
         except KeyError as e:
@@ -80,19 +82,19 @@ class Record:
 
     def remove_phone(self, phone: str) -> None:
         """Видалити номер телефону."""
-        found: Optional[Phone] = self.find_phone(phone)
+        found: Phone | None = self.find_phone(phone)
         if found is None:
             raise ValueError(f"Phone {phone} not found for '{self.name.value}'.")
         self.phones.remove(found)
 
     def edit_phone(self, old_phone: str, new_phone: str) -> None:
         """Замінити існуючий номер на новий."""
-        found: Optional[Phone] = self.find_phone(old_phone)
+        found: Phone | None = self.find_phone(old_phone)
         if found is None:
             raise ValueError(f"Phone {old_phone} not found for '{self.name.value}'.")
         found.value = Phone(new_phone).value
 
-    def find_phone(self, phone: str) -> Optional[Phone]:
+    def find_phone(self, phone: str) -> Phone | None:
         """Знайти об'єкт Phone за значенням. Повертає Phone або None."""
         return next((p for p in self.phones if p.value == phone), None)
 
@@ -111,7 +113,7 @@ class AddressBook(UserDict[str, Record]):
         """Додати запис до книги."""
         self.data[record.name.value] = record
 
-    def find(self, name: str) -> Optional[Record]:
+    def find(self, name: str) -> Record | None:
         """Знайти запис за іменем. Повертає Record або None."""
         return self.data.get(name)
 
@@ -141,7 +143,7 @@ def create_contact(book: AddressBook, args: List[str]) -> str:
 def add_phone(book: AddressBook, args: List[str]) -> str:
     """add phone <name> <phone>"""
     name, phone = args[0], args[1]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     record.add_phone(phone)
@@ -152,7 +154,7 @@ def add_phone(book: AddressBook, args: List[str]) -> str:
 def update_phone(book: AddressBook, args: List[str]) -> str:
     """update phone <name> <old_phone> <new_phone>"""
     name, old_phone, new_phone = args[0], args[1], args[2]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     record.edit_phone(old_phone, new_phone)
@@ -163,7 +165,7 @@ def update_phone(book: AddressBook, args: List[str]) -> str:
 def search_contact(book: AddressBook, args: List[str]) -> str:
     """search <name>"""
     name: str = args[0]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     phones: str = "\n  ".join(
@@ -180,7 +182,7 @@ def search_contact(book: AddressBook, args: List[str]) -> str:
 def remove_phone(book: AddressBook, args: List[str]) -> str:
     """remove phone <name> <phone>"""
     name, phone = args[0], args[1]
-    record: Optional[Record] = book.find(name)
+    record: Record | None = book.find(name)
     if record is None:
         raise KeyError(f"'{name}'")
     record.remove_phone(phone)
@@ -240,7 +242,7 @@ def show_help(book: AddressBook, args: List[str]) -> str:
 # ===========================================================================
 # ТАБЛИЦЯ КОМАНД — стиль ДЗ 3
 # ===========================================================================
-COMMANDS: Dict[str, Callable[[AddressBook, List[str]], Optional[str]]] = {
+COMMANDS: Dict[str, Callable[[AddressBook, List[str]], str | None]] = {
     "hello": hello,
     "help": show_help,
     "create contact": create_contact,
@@ -286,7 +288,7 @@ def main() -> None:
         if command in EXIT_COMMANDS:
             print("Good bye!")
             break
-        handler: Optional[Callable[[AddressBook, List[str]], Optional[str]]] = (
+        handler: Callable[[AddressBook, List[str]], str | None] | None = (
             COMMANDS.get(command)
         )
         if handler is None:

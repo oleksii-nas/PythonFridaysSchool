@@ -28,6 +28,8 @@ def input_error(func: Callable[..., str]) -> Callable[..., str | None]:
 class Field:
     """Базовий клас для всіх полів запису."""
 
+    _value: str
+
     def __init__(self, value: str) -> None:
         self.value = value  # викликає setter
 
@@ -74,7 +76,13 @@ class Birthday(Field):
     Зберігається як datetime.date.
     """
 
+    _value: date
+
     _DATE_FORMAT = "%d.%m.%Y"
+
+    def __init__(self, value: str) -> None:
+        self.value = value  # викликає setter
+        super().__init__(value)
 
     @Field.value.getter
     def value(self) -> date:
@@ -102,10 +110,11 @@ class Record:
     phones: List[Phone]
     birthday: Birthday | None
 
-    def __init__(self, name: str, birthday: str | None = None) -> None:
+    def __init__(self, name: str, birthday: str | None):
         self.name = Name(name)
         self.phones = []
-        self.birthday: Birthday | None = Birthday(birthday) if birthday else None
+        if birthday:
+            self.birthday = Birthday(birthday)
 
     # --- телефони ---
 
@@ -131,7 +140,7 @@ class Record:
 
     # --- день народження ---
 
-    def add_birthday(self, birthday: str) -> None:
+    def add_birthday(self, birthday: str):
         self.birthday = Birthday(birthday)
 
     def days_to_birthday(self, _today: date | None = None) -> int | None:

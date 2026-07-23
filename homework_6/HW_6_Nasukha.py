@@ -170,6 +170,10 @@ class AddressBook(UserDict[str, Record]):
     збереження та завантаження з файлу (save/load).
     """
 
+    _path: str = str(
+        Path(__file__).resolve().parent.parent / "reserv_files" / "address_book.pkl"
+    )
+
     # --- пагінація ---
 
     def iterator(self, n: int) -> Generator[List[Record], None, None]:
@@ -207,31 +211,37 @@ class AddressBook(UserDict[str, Record]):
 
     # --- збереження / завантаження ---
 
-    def save(self, path: str) -> None:
+    def save(self, path: str | None = None) -> None:
         """
         Зберігає адресну книгу у бінарний файл через pickle.
         Запис атомарний: спочатку у тимчасовий файл, потім заміна,
         щоб збій під час запису не знищив попередні дані.
+        За замовчуванням пише у reserv_files/address_book.pkl в корені проекту.
         """
-        tmp_path = f"{path}.tmp"
+        save_path = path or self._path
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = f"{save_path}.tmp"
         with open(tmp_path, "wb") as f:
             pickle.dump(self.data, f)
-        os.replace(tmp_path, path)
+        os.replace(tmp_path, save_path)
 
     @classmethod
-    def load(cls, path: str) -> "AddressBook":
+    def load(cls, path: str | None = None) -> "AddressBook":
         """
         Завантажує адресну книгу з файлу.
         Якщо файл не існує або пошкоджений — повертає порожню книгу.
         """
+        load_path = path or cls._path
         book = cls()
-        p = Path(path)
+        p = Path(load_path)
         if p.exists():
             try:
-                with open(path, "rb") as f:
+                with open(load_path, "rb") as f:
                     book.data = pickle.load(f)
             except (pickle.UnpicklingError, EOFError, AttributeError, ValueError):
-                print(f"WARN: could not read '{path}' — starting with an empty book.")
+                print(
+                    f"WARN: could not read '{load_path}' — starting with an empty book."
+                )
         return book
 
 
@@ -404,8 +414,6 @@ COMMANDS: Dict[str, Callable[[AddressBook, List[str]], str | None]] = {
 EXIT_COMMANDS: Set[str] = {"exit", "close", "good bye"}
 TWO_WORD_KEYS: Set[str] = {k for k in list(COMMANDS) + list(EXIT_COMMANDS) if " " in k}
 
-SAVE_FILE: str = str(Path(__file__).parent / "address_book.pkl")
-
 
 # ===========================================================================
 # ПАРСЕР
@@ -424,7 +432,7 @@ def parse_input(user_input: str) -> Tuple[str, List[str]]:
 # ГОЛОВНИЙ ЦИКЛ
 # ===========================================================================
 def main() -> None:
-    book: AddressBook = AddressBook.load(SAVE_FILE)
+    book: AddressBook = AddressBook.load()
 
     contacts_count = len(book.data)
     print("Welcome to the Assistant Bot!")
@@ -454,7 +462,7 @@ def main() -> None:
         print("\nInterrupted — saving address book...")
     finally:
         # Дані зберігаються за будь-якого сценарію виходу, включно з Ctrl+C
-        book.save(SAVE_FILE)
+        book.save()
 
 
 if __name__ == "__main__":

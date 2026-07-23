@@ -13,7 +13,7 @@ and its unit tests (`test_*.py`):
 - `homework_3/HW_3_Nasukha.py` — console assistant bot (contacts, global dict)
 - `homework_4/HW_4_Nasukha.py` — assistant bot rewritten with OOP (Field/Name/Phone/Record/AddressBook)
 - `homework_5/HW_5_Nasukha.py` — adds Birthday field, property-based validation, pagination iterator
-- `homework_6/HW_6_Nasukha.py` — adds search and pickle persistence (`address_book.pkl` next to the script, saved on any exit including Ctrl+C)
+- `homework_6/HW_6_Nasukha.py` — adds search and pickle persistence (`reserv_files/address_book.pkl` in the project root, saved on any exit including Ctrl+C)
 
 Homeworks 4–6 deliberately copy and extend the previous one — each folder is
 self-contained by design; do not deduplicate across folders.
@@ -61,4 +61,4 @@ Dependencies are listed in `requirements.txt` (pytest only). The root
 - Command dispatch via a `COMMANDS` dict; `parse_input()` recognises two-word commands; `input_error` decorator converts Key/Value/IndexError into user-facing messages
 - HW3 stores phones cleaned of `+`, `-` and spaces (`validate_phone` returns the cleaned number)
 - HW4+ pass `AddressBook` explicitly into every handler (no globals)
-- HW6 persistence: `AddressBook.save()` writes atomically (tmp file + `os.replace`); `AddressBook.load()` returns an empty book for a missing or corrupted file; `main()` saves in a `finally` block so Ctrl+C/EOF do not lose data
+- HW6 persistence: `AddressBook.save()` writes atomically (tmp file + `os.replace`) to `reserv_files/address_book.pkl` in the project root by default (`AddressBook._path`), creating the folder if missing; `AddressBook.load()` returns an empty book for a missing or corrupted file; `main()` saves in a `finally` block so Ctrl+C/EOF do not lose data
